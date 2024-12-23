@@ -139,35 +139,33 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Stack(
-                alignment: Alignment.bottomRight,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _nameController.text,
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          user?.email ?? '',
+                          style:
+                              const TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16), // Spacing between text and image
                   GestureDetector(
                     onTap: _pickImage,
                     child: _buildProfileImage(),
                   ),
-                  Container(
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color.fromARGB(255, 78, 100, 103),
-                    ),
-                    padding: const EdgeInsets.all(6),
-                    child: const Icon(Icons.camera_alt, color: Colors.white),
-                  ),
                 ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _nameController.text,
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                user?.email ?? '',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               TextField(
