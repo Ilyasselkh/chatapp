@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Importer Firebase Storage
+import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({Key? key}) : super(key: key);
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -46,7 +46,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user != null) {
       String? imageUrl;
 
-      // Si une image est sélectionnée, téléchargez-la sur Firebase Storage
+      // If an image is selected, upload it to Firebase Storage
       if (_image != null) {
         imageUrl = await uploadImageToFirebase();
       }
@@ -58,11 +58,33 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': _nameController.text,
         'bio': _bioController.text,
         'phone': _phoneController.text,
-        'profileImage': imageUrl, // Stockez l'URL de l'image
+        'profileImage': imageUrl, // Store the image URL or leave it null
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
+      );
+    }
+  }
+
+  Widget _buildProfileImage() {
+    if (_image != null) {
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: FileImage(_image!),
+      );
+    } else if (userData != null && userData!['profileImage'] != null) {
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: NetworkImage(userData!['profileImage']),
+      );
+    } else {
+      return const CircleAvatar(
+        radius: 60,
+        child: Text(
+          'U', // Default letter
+          style: TextStyle(fontSize: 40),
+        ),
       );
     }
   }
@@ -80,15 +102,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<String?> uploadImageToFirebase() async {
     try {
-      // Créez une référence à Firebase Storage
+      // Create a reference to Firebase Storage
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_images/${user!.uid}.jpg');
 
-      // Téléchargez le fichier
+      // Upload the file
       await storageRef.putFile(_image!);
 
-      // Obtenez l'URL du fichier téléchargé
+      // Get the download URL of the uploaded file
       String downloadUrl = await storageRef.getDownloadURL();
       return downloadUrl;
     } catch (e) {
@@ -97,181 +119,117 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Widget _buildProfileImage() {
-    if (_image != null) {
-      return CircleAvatar(
-        radius: 60,
-        backgroundImage: FileImage(_image!),
-      );
-    } else if (userData != null && userData!['profileImage'] != null) {
-      return CircleAvatar(
-        radius: 60,
-        backgroundImage: NetworkImage(userData!['profileImage']),
-      );
-    } else if (_nameController.text.isNotEmpty) {
-      return CircleAvatar(
-        radius: 60,
-        child: Text(
-          _nameController.text[0].toUpperCase(),
-          style: const TextStyle(fontSize: 40),
-        ),
-      );
-    } else {
-      return const CircleAvatar(
-        radius: 60,
-        child: Text(
-          'U',
-          style: TextStyle(fontSize: 40),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(186, 101, 11, 103),
-        elevation: 0,
-        title: const Text('Profile', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: updateUserData,
-          ),
-        ],
+        title: const Text("Profile"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
-      body: userData == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Stack(
+                alignment: Alignment.bottomRight,
                 children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      GestureDetector(
-                        onTap: _pickImage,
-                        child: _buildProfileImage(),
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.green,
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        child:
-                            const Icon(Icons.camera_alt, color: Colors.white),
-                      ),
-                    ],
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: _buildProfileImage(),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      const Icon(Icons.person, color: Colors.grey),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Name',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            TextField(
-                              controller: _nameController,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter your name',
-                                hintStyle: TextStyle(color: Colors.grey),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.edit, color: Colors.green),
-                    ],
-                  ),
-                  const Divider(color: Colors.grey),
-                  Row(
-                    children: [
-                      const Icon(Icons.info, color: Colors.grey),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'About',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            TextField(
-                              controller: _bioController,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter your bio',
-                                hintStyle: TextStyle(color: Colors.grey),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.edit, color: Colors.green),
-                    ],
-                  ),
-                  const Divider(color: Colors.grey),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, color: Colors.grey),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Phone',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            TextField(
-                              controller: _phoneController,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter your phone number',
-                                hintStyle: TextStyle(color: Colors.grey),
-                                border: InputBorder.none,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color.fromARGB(255, 78, 100, 103),
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child: const Icon(Icons.camera_alt, color: Colors.white),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 20),
+              Text(
+                _nameController.text,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                user?.email ?? '',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(Icons.person, color: Colors.blueGrey),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _bioController,
+                decoration: InputDecoration(
+                  labelText: 'About',
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(Icons.info, color: Colors.blueGrey),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _phoneController,
+                decoration: InputDecoration(
+                  labelText: 'Phone',
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(Icons.phone, color: Colors.blueGrey),
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: updateUserData,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey[800],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 15.0),
+                ),
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(fontSize: 16.0, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
