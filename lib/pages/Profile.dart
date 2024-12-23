@@ -6,7 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // Importer Firebase St
 import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
