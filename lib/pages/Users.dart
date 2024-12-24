@@ -30,8 +30,8 @@ class _UserSelectionPageState extends State<UserSelectionPage> {
     // Fetch user profiles from Firestore
     final usersSnapshot = await FirebaseFirestore.instance
         .collection('users') // Your collection for user profiles
-        .where('email', isGreaterThanOrEqualTo: query)
-        .where('email', isLessThanOrEqualTo: '$query\uf8ff')
+        .where('name', isGreaterThanOrEqualTo: query)
+        .where('name', isLessThanOrEqualTo: '$query\uf8ff')
         .get();
 
     setState(() {
@@ -57,7 +57,19 @@ class _UserSelectionPageState extends State<UserSelectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select User'),
+        toolbarHeight: 80.0, // Set the height of the AppBar
+        title: const Text(
+          'Start a new discussion',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: const Color.fromARGB(
+            255, 64, 93, 105), // Change to your preferred color
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -67,21 +79,50 @@ class _UserSelectionPageState extends State<UserSelectionPage> {
               controller: _searchController,
               onChanged: _searchUsers,
               decoration: InputDecoration(
-                hintText: 'Search by email...',
-                border: OutlineInputBorder(),
+                hintText: 'Search by name...',
+                hintStyle:
+                    TextStyle(color: Colors.grey[600]), // Hint text color
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30), // Rounded corners
+                  borderSide: BorderSide(color: Colors.teal, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(
+                      color: Colors.teal, width: 2), // Focused border
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide(
+                      color: Colors.teal, width: 1), // Enabled border
+                ),
               ),
             ),
           ),
-          if (_isLoading) CircularProgressIndicator(), // Show loading indicator
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(), // Show loading indicator
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: _users.length,
               itemBuilder: (context, index) {
                 final user = _users[index];
-                return ListTile(
-                  title: Text(user['name']),
-                  subtitle: Text(user['email']),
-                  onTap: () => _selectUser(user),
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8.0, horizontal: 16.0), // Card margin
+                  elevation: 4, // Shadow effect
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15), // Rounded corners
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      user['name'],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () => _selectUser(user),
+                  ),
                 );
               },
             ),

@@ -40,7 +40,7 @@ class UserAvatar extends StatelessWidget {
           height: 40.0,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.purple,
+            color: Color.fromARGB(255, 102, 157, 169),
           ),
           alignment: Alignment.center,
           child: profileImage != null && profileImage.isNotEmpty
@@ -62,6 +62,39 @@ class UserAvatar extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+class NotificationBubble extends StatelessWidget {
+  final int count;
+
+  const NotificationBubble({Key? key, required this.count}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(6.0),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(
+            255, 244, 54, 79), // Background color of the bubble
+        shape: BoxShape.circle,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14.0,
+        ),
+      ),
     );
   }
 }
@@ -268,6 +301,14 @@ class _HomePageState extends State<HomePage> {
         for (var doc in messagesSnapshot.docs) {
           batch.update(doc.reference, {'isRead': true});
         }
+
+        // Réinitialiser le compteur de nouveaux messages à 0
+        batch.update(
+            FirebaseFirestore.instance.collection('users').doc(currentUserId), {
+          'newMessagesCount':
+              0, // Assurez-vous que ce champ existe dans votre collection
+        });
+
         await batch.commit();
       } catch (e) {
         print("Error marking messages as read: $e");
@@ -286,72 +327,189 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80.0),
-        child: AppBar(
-          backgroundColor: const Color.fromARGB(255, 64, 93, 105),
-          automaticallyImplyLeading: false,
-          title: Padding(
-            padding: const EdgeInsets.only(top: 20.0), // Adjust the top padding
-            child: _isSearching
-                ? Container(
-                    width: MediaQuery.of(context).size.width *
-                        0.7, // Search bar width
-                    decoration: BoxDecoration(
-                      color: Colors.white, // Background color
-                      borderRadius:
-                          BorderRadius.circular(30), // Rounded corners
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 6,
-                          offset: Offset(0, 3), // Shadow offset
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _filterChatHistory,
-                      decoration: const InputDecoration(
-                        hintText: 'Search...',
-                        border: InputBorder.none,
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                    ),
-                  )
-                : const Text(
-                    'ChatApp',
-                    style: TextStyle(
-                        color: Colors.white), // Set the text style here
-                  ),
-          ),
-          actions: [
-            Padding(
+    return GestureDetector(
+      onTap: () {
+        // Rafraîchir les données chaque fois que l'écran est touché
+        _fetchChatHistory();
+      },
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(80.0),
+          child: AppBar(
+            backgroundColor: const Color.fromARGB(255, 64, 93, 105),
+            automaticallyImplyLeading: false,
+            title: Padding(
               padding:
                   const EdgeInsets.only(top: 20.0), // Adjust the top padding
-              child: IconButton(
-                icon: Icon(
-                  _isSearching ? Icons.close : Icons.search,
-                  color: Colors.white,
+              child: _isSearching
+                  ? Container(
+                      width: MediaQuery.of(context).size.width *
+                          0.7, // Search bar width
+                      decoration: BoxDecoration(
+                        color: Colors.white, // Background color
+                        borderRadius:
+                            BorderRadius.circular(30), // Rounded corners
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(0, 3), // Shadow offset
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: _filterChatHistory,
+                        decoration: const InputDecoration(
+                          hintText: 'Search...',
+                          border: InputBorder.none,
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                    )
+                  : const Text(
+                      'ChatApp',
+                      style: TextStyle(
+                          color: Colors.white), // Set the text style here
+                    ),
+            ),
+            actions: [
+              Padding(
+                padding:
+                    const EdgeInsets.only(top: 20.0), // Adjust the top padding
+                child: IconButton(
+                  icon: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        _filteredChatHistory = List.from(_chatHistory);
+                      }
+                    });
+                  },
                 ),
-                onPressed: () {
-                  setState(() {
-                    _isSearching = !_isSearching;
-                    if (!_isSearching) {
-                      _searchController.clear();
-                      _filteredChatHistory = List.from(_chatHistory);
-                    }
-                  });
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.only(top: 20.0), // Adjust the top padding
+                child: IconButton(
+                  icon: const Icon(Icons.person, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ProfilePage()),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.only(top: 20.0), // Adjust the top padding
+                child: IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(
+                        builder: (context) => const SignIn()));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: Column(
+          children: [
+            // Dans le build du ListView.builder de votre HomePage
+            Expanded(
+              child: ListView.builder(
+                itemCount: _filteredChatHistory.length,
+                itemBuilder: (context, index) {
+                  final chat = _filteredChatHistory[index];
+                  bool hasNewMessages = chat['newMessagesCount'] > 0;
+
+                  return Container(
+                    height: 90, // Augmentez la hauteur ici
+                    color: hasNewMessages
+                        ? Colors.grey[300]
+                        : Colors.white, // Changez la couleur de fond
+                    child: ListTile(
+                      leading: UserAvatar(
+                        userName: chat['userName'],
+                        userId: chat['userId'],
+                      ),
+                      title: Text(
+                        chat['userName'],
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        chat['lastMessage'],
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      trailing: hasNewMessages
+                          ? NotificationBubble(count: chat['newMessagesCount'])
+                          : null,
+                      onTap: () {
+                        _markMessagesAsRead(chat['userId']);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatPage(
+                              userId: chat['userId'],
+                              userName: chat['userName'],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
                 },
               ),
             ),
-            Padding(
-              padding:
-                  const EdgeInsets.only(top: 20.0), // Adjust the top padding
-              child: IconButton(
-                icon: const Icon(Icons.person, color: Colors.white),
-                onPressed: () {
+
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton(
+                onPressed: _startNewDiscussion,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 58, 90, 115),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text(
+                  'Start New Discussion',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+        drawer: Drawer(
+          child: ListView(
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: Text(user?.displayName ?? 'User'),
+                accountEmail: Text(user?.email ?? ''),
+                currentAccountPicture: CircleAvatar(
+                  child: ClipOval(
+                    child: Image.network(
+                      user?.photoURL ?? '',
+                      fit: BoxFit.cover,
+                      width: 40.0,
+                      height: 40.0,
+                    ),
+                  ),
+                ),
+              ),
+              ListTile(
+                title: const Text('Profile'),
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -359,107 +517,8 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.only(top: 20.0), // Adjust the top padding
-              child: IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const SignIn()));
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _filteredChatHistory.length,
-              itemBuilder: (context, index) {
-                final chat = _filteredChatHistory[index];
-                return ListTile(
-                  leading: UserAvatar(
-                    userName: chat['userName'],
-                    userId: chat['userId'],
-                  ),
-                  title: Text(chat['userName']),
-                  subtitle: Text(chat['lastMessage']),
-                  trailing: chat['newMessagesCount'] > 0
-                      ? CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Colors.red,
-                          child: Text(
-                            chat['newMessagesCount'].toString(),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        )
-                      : null,
-                  onTap: () {
-                    _markMessagesAsRead(chat['userId']);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatPage(
-                          userId: chat['userId'],
-                          userName: chat['userName'],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: _startNewDiscussion,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 58, 90, 115),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Start New Discussion',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(user?.displayName ?? 'User'),
-              accountEmail: Text(user?.email ?? ''),
-              currentAccountPicture: CircleAvatar(
-                child: ClipOval(
-                  child: Image.network(
-                    user?.photoURL ?? '',
-                    fit: BoxFit.cover,
-                    width: 40.0,
-                    height: 40.0,
-                  ),
-                ),
-              ),
-            ),
-            ListTile(
-              title: const Text('Profile'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProfilePage()),
-                );
-              },
-            ),
-          ],
         ),
       ),
     );
